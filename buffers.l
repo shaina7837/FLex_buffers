@@ -1,3 +1,4 @@
+%option noyywrap
 %{
 #include <iostream>
 #include <string>
@@ -5,20 +6,27 @@
 using namespace std;
 #define YY_DECL extern "C" int yylex()
 
-string filename;
 %}
 
+%x incl
 %%
-include[ \t\n]*"<" { cout<<"included"<<endl;}
-[^ \t\n>]+	   { cout << yytext;
-			 FILE *in = fopen( yytext, "r" );
-     
-                 if ( !in )
-                     cout << "error found"<<endl;
-     
-     			yypush_buffer_state(yy_create_buffer( in, YY_BUF_SIZE ));
-     
-                 }
+#include { BEGIN(incl); cout<< yytext; }
+[A-Za-z\t\n]*	   { cout << yytext; }
+" "		   { cout << yytext; }
+<incl>[ \t]*"<"
+<incl>[^ \t\n>]+ { yyin = fopen(yytext, "r");
+		if(!yyin)
+		{
+			cout << "ERROR opening file";
+			yyterminate();
+		}
+		else
+		{
+			cout <<endl<< "Reading file : "<<yytext<<endl;
+			yypush_buffer_state(yy_create_buffer( yyin, YY_BUF_SIZE));
+		}
+		BEGIN(INITIAL);
+		 }
      
 <<EOF>> {
      			yypop_buffer_state();
@@ -40,8 +48,6 @@ int main()
 		cout << "not opened!"<<endl;
 	}
 	yyin = myfile;
-	  yypush_buffer_state(yy_create_buffer(yyin, YY_BUF_SIZE));
-
 	yylex();
 }
 	
